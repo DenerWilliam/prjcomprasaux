@@ -26,14 +26,14 @@ jobs:
     
     - name: Executar testes
       run: |
-        python manage.py test
-        python manage.py check --deploy
+        uv run manage.py test
+        uv run manage.py check --deploy
     
     - name: Executar linting
       run: |
-        pip install flake8
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        uv add flake8
+        uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   deploy:
     needs: test
@@ -52,7 +52,7 @@ jobs:
         port: ${{ secrets.VM_PORT }}
         script: |
           cd /home/${{ secrets.VM_USERNAME }}/prjcomprasaux
-          git pull origin main
+          git pull
           uv sync
           python manage.py migrate
           python manage.py collectstatic --noinput
