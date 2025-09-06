@@ -1,0 +1,84 @@
+# Arquivos e pastas gerados pelo Python
+__pycache__/
+poetry.lock
+uv.lock
+*.py[oc]
+*.pyo
+*.pyd
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+wheels/
+.eggs/
+pip-wheel-metadata/
+*.manifest
+*.spec
+
+# Ambientes virtuais
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+.venv.bak/
+
+# Arquivos de configuração do editor/IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Arquivos de sistema operacional
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# Arquivos de banco de dados locais
+db.sqlite3
+*.sqlite3
+
+# Arquivos de log
+*.log
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.~*
+
+# Arquivos de testes e cobertura
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Arquivos de migração do Django (opcional, se não quiser versionar)
+# **/migrations/
+# !**/migrations/__init__.py
+
+# Arquivos de configuração do sistema operacional
+*.orig
+
+# Arquivos de lock de dependências (opcional, se não quiser versionar)
+# Pipenv.lock
+# poetry.lock
+
+# Outros arquivos sensíveis ou desnecessários
+.env
+.env.*
+.secret
+secrets.json

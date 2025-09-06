@@ -1,0 +1,20 @@
+# Dependências do projeto prjcomprasaux
+# Gerado automaticamente baseado no pyproject.toml
+
+# Django e dependências principais
+Django>=5.2.6
+djangorestframework>=3.16.1
+django-filter>=25.1
+
+# Dependências de desenvolvimento e teste
+coverage>=7.10.6
+requests>=2.31.0
+markdown>=3.9
+
+# Dependências para produção
+gunicorn>=21.2.0
+psycopg2-binary>=2.9.7  # Para PostgreSQL (opcional)
+whitenoise>=6.5.0  # Para servir arquivos estáticos
+
+# Dependências de segurança
+python-decouple>=3.8  # Para gerenciar variáveis de ambiente

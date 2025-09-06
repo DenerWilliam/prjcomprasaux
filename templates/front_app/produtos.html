@@ -1,0 +1,229 @@
+{% extends 'front_app/base.html' %}
+
+{% block title %}Produtos - Sistema de Compras{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-box me-2"></i>Produtos</h2>
+            <button class="btn btn-primary" onclick="mostrarModalCriarProduto()">
+                <i class="fas fa-plus me-2"></i>Novo Produto
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Preço</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-produtos">
+                            <tr>
+                                <td colspan="4" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando produtos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar/Editar Produto -->
+<div class="modal fade" id="modalProduto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloModal">Novo Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formProduto">
+                    {% csrf_token %}
+                    <input type="hidden" id="produtoId">
+                    <div class="mb-3">
+                        <label for="nomeProduto" class="form-label">Nome do Produto</label>
+                        <input type="text" class="form-control" id="nomeProduto" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="precoProduto" class="form-label">Preço (R$)</label>
+                        <input type="number" class="form-control" id="precoProduto" step="0.01" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarProduto()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalConfirmacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir este produto?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarExclusao()">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let produtos = [];
+    let produtoParaExcluir = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        carregarProdutos();
+    });
+
+    async function carregarProdutos() {
+        try {
+            const response = await makeRequest('/api/produtos/');
+            
+            // Verificar se a resposta tem a estrutura esperada
+            if (response && Array.isArray(response)) {
+                produtos = response;
+            } else if (response && response.data && Array.isArray(response.data)) {
+                produtos = response.data;
+            } else {
+                produtos = [];
+            }
+            
+            renderizarTabela();
+        } catch (error) {
+            document.getElementById('tabela-produtos').innerHTML = 
+                '<tr><td colspan="4" class="text-center text-danger">Erro ao carregar produtos</td></tr>';
+        }
+    }
+
+    function renderizarTabela() {
+        const tbody = document.getElementById('tabela-produtos');
+        
+        if (produtos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Nenhum produto encontrado</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = produtos.map(produto => `
+            <tr>
+                <td>${produto.id}</td>
+                <td>${produto.nome}</td>
+                <td>${formatCurrency(produto.preco)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary me-1" onclick="editarProduto(${produto.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirProduto(${produto.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function mostrarModalCriarProduto() {
+        document.getElementById('tituloModal').textContent = 'Novo Produto';
+        document.getElementById('formProduto').reset();
+        document.getElementById('produtoId').value = '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalProduto'));
+        modal.show();
+    }
+
+    function editarProduto(id) {
+        const produto = produtos.find(p => p.id === id);
+        if (!produto) return;
+
+        document.getElementById('tituloModal').textContent = 'Editar Produto';
+        document.getElementById('produtoId').value = produto.id;
+        document.getElementById('nomeProduto').value = produto.nome;
+        document.getElementById('precoProduto').value = produto.preco;
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalProduto'));
+        modal.show();
+    }
+
+    async function salvarProduto() {
+        const id = document.getElementById('produtoId').value;
+        const nome = document.getElementById('nomeProduto').value;
+        const preco = document.getElementById('precoProduto').value;
+
+        if (!nome || !preco) {
+            showError('Por favor, preencha todos os campos');
+            return;
+        }
+
+        try {
+            const data = { nome: nome, preco: parseFloat(preco) };
+            
+            if (id) {
+                // Editar produto existente
+                const response = await makeRequest(`/api/produtos/${id}/`, 'PUT', data);
+                showSuccess('Produto atualizado com sucesso!');
+            } else {
+                // Criar novo produto
+                const response = await makeRequest('/api/produtos/', 'POST', data);
+                showSuccess('Produto criado com sucesso!');
+            }
+
+            // Fechar modal e recarregar dados
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalProduto'));
+            modal.hide();
+            carregarProdutos();
+
+        } catch (error) {
+            console.error('Erro ao salvar produto:', error);
+        }
+    }
+
+    function excluirProduto(id) {
+        produtoParaExcluir = id;
+        const modal = new bootstrap.Modal(document.getElementById('modalConfirmacao'));
+        modal.show();
+    }
+
+    async function confirmarExclusao() {
+        if (!produtoParaExcluir) return;
+
+        try {
+            await makeRequest(`/api/produtos/${produtoParaExcluir}/`, 'DELETE');
+            showSuccess('Produto excluído com sucesso!');
+            
+            // Fechar modal e recarregar dados
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacao'));
+            modal.hide();
+            carregarProdutos();
+
+        } catch (error) {
+            console.error('Erro ao excluir produto:', error);
+        } finally {
+            produtoParaExcluir = null;
+        }
+    }
+</script>
+{% endblock %}

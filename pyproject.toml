@@ -1,0 +1,13 @@
+[project]
+name = "prjcomprasaux"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "coverage>=7.10.6",
+    "django-filter>=25.1",
+    "djangorestframework>=3.16.1",
+    "markdown>=3.9",
+    "requests>=2.31.0",
+]

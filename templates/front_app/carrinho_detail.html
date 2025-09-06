@@ -1,0 +1,406 @@
+{% extends 'front_app/base.html' %}
+
+{% block title %}Detalhes do Carrinho - Sistema de Compras{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-shopping-basket me-2"></i>Detalhes do Carrinho</h2>
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'home' %}">Início</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'carrinhos' %}">Carrinhos</a></li>
+                        <li class="breadcrumb-item active" id="breadcrumb-carrinho">Carregando...</li>
+                    </ol>
+                </nav>
+            </div>
+            <div>
+                <button class="btn btn-success me-2" onclick="mostrarModalAdicionarItem()">
+                    <i class="fas fa-plus me-2"></i>Adicionar Item
+                </button>
+                <a href="{% url 'carrinhos' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Voltar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Informações do Carrinho -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle me-2"></i>Informações do Carrinho</h5>
+            </div>
+            <div class="card-body" id="info-carrinho">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i> Carregando informações...
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-calculator me-2"></i>Resumo</h5>
+            </div>
+            <div class="card-body" id="resumo-carrinho">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin"></i> Carregando resumo...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lista de Itens -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-list me-2"></i>Itens do Carrinho</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th>Preço Unitário</th>
+                                <th>Quantidade</th>
+                                <th>Subtotal</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-itens">
+                            <tr>
+                                <td colspan="5" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando itens...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Adicionar Item -->
+<div class="modal fade" id="modalAdicionarItem" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Adicionar Item ao Carrinho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formAdicionarItem">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="produtoSelect" class="form-label">Produto</label>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="mostrarModalNovoProduto()">
+                                <i class="fas fa-plus me-1"></i>Novo Produto
+                            </button>
+                        </div>
+                        <select class="form-select" id="produtoSelect" required>
+                            <option value="">Selecione um produto...</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quantidadeItem" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidadeItem" min="1" value="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="adicionarItem()">Adicionar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar Novo Produto -->
+<div class="modal fade" id="modalNovoProduto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Novo Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formNovoProduto">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="nomeNovoProduto" class="form-label">Nome do Produto</label>
+                        <input type="text" class="form-control" id="nomeNovoProduto" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="precoNovoProduto" class="form-label">Preço (R$)</label>
+                        <input type="number" class="form-control" id="precoNovoProduto" step="0.01" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="criarNovoProduto()">Criar Produto</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalConfirmacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja remover este item do carrinho?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarExclusaoItem()">Remover</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const carrinhoId = {{ carrinho_id }};
+    let produtos = [];
+    let itens = [];
+    let itemParaExcluir = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        carregarDados();
+    });
+
+    async function carregarDados() {
+        await Promise.all([
+            carregarInfoCarrinho(),
+            carregarResumoCarrinho(),
+            carregarProdutos(),
+            carregarItens()
+        ]);
+    }
+
+    async function carregarInfoCarrinho() {
+        try {
+            const response = await makeRequest(`/api/baskets/${carrinhoId}/`);
+            const carrinho = response.data || response;
+            
+            document.getElementById('breadcrumb-carrinho').textContent = carrinho.nome;
+            document.getElementById('info-carrinho').innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Nome:</strong> ${carrinho.nome}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Estabelecimento:</strong> ${carrinho.estabelecimento}
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-md-6">
+                        <strong>Data de Criação:</strong> ${formatDate(carrinho.data_criacao)}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Última Atualização:</strong> ${formatDate(carrinho.data_atualizacao)}
+                    </div>
+                </div>
+            `;
+        } catch (error) {
+            document.getElementById('info-carrinho').innerHTML = 
+                '<div class="text-center text-danger">Erro ao carregar informações do carrinho</div>';
+        }
+    }
+
+    async function carregarResumoCarrinho() {
+        try {
+            const response = await makeRequest(`/api/basket-summary/${carrinhoId}/`);
+            const resumo = response.data || response;
+            
+            document.getElementById('resumo-carrinho').innerHTML = `
+                <div class="text-center">
+                    <h4 class="text-primary">${resumo.total_itens_unicos}</h4>
+                    <p class="text-muted mb-2">Itens Únicos</p>
+                    
+                    <h4 class="text-success">${resumo.total_quantidade}</h4>
+                    <p class="text-muted mb-2">Quantidade Total</p>
+                    
+                    <hr>
+                    
+                    <h3 class="text-warning">${formatCurrency(resumo.valor_total)}</h3>
+                    <p class="text-muted">Valor Total</p>
+                </div>
+            `;
+        } catch (error) {
+            document.getElementById('resumo-carrinho').innerHTML = 
+                '<div class="text-center text-danger">Erro ao carregar resumo</div>';
+        }
+    }
+
+    async function carregarProdutos() {
+        try {
+            const response = await makeRequest('/api/produtos/');
+            produtos = response.data || response;
+            
+            const select = document.getElementById('produtoSelect');
+            select.innerHTML = '<option value="">Selecione um produto...</option>' +
+                produtos.map(produto => 
+                    `<option value="${produto.id}">${produto.nome} - ${formatCurrency(produto.preco)}</option>`
+                ).join('');
+        } catch (error) {
+            console.error('Erro ao carregar produtos:', error);
+        }
+    }
+
+    async function carregarItens() {
+        try {
+            const response = await makeRequest(`/api/basket-items/?basket=${carrinhoId}`);
+            itens = response.data || response;
+            renderizarTabelaItens();
+        } catch (error) {
+            document.getElementById('tabela-itens').innerHTML = 
+                '<tr><td colspan="5" class="text-center text-danger">Erro ao carregar itens</td></tr>';
+        }
+    }
+
+    function renderizarTabelaItens() {
+        const tbody = document.getElementById('tabela-itens');
+        
+        if (itens.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Nenhum item no carrinho</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = itens.map(item => `
+            <tr>
+                <td>${item.produto_nome}</td>
+                <td>${formatCurrency(item.produto_preco)}</td>
+                <td>${item.quantidade}</td>
+                <td>${formatCurrency(item.subtotal)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirItem(${item.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function mostrarModalAdicionarItem() {
+        const modal = new bootstrap.Modal(document.getElementById('modalAdicionarItem'));
+        modal.show();
+    }
+
+    async function adicionarItem() {
+        const produtoId = document.getElementById('produtoSelect').value;
+        const quantidade = document.getElementById('quantidadeItem').value;
+
+        if (!produtoId || !quantidade) {
+            showError('Por favor, selecione um produto e informe a quantidade');
+            return;
+        }
+
+        try {
+            await makeRequest('/api/basket-items/', 'POST', {
+                basket: carrinhoId,
+                produto_id: parseInt(produtoId),
+                quantidade: parseInt(quantidade)
+            });
+
+            showSuccess('Item adicionado com sucesso!');
+            
+            // Fechar modal e limpar formulário
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalAdicionarItem'));
+            modal.hide();
+            document.getElementById('formAdicionarItem').reset();
+
+            // Recarregar dados
+            carregarResumoCarrinho();
+            carregarItens();
+
+        } catch (error) {
+            console.error('Erro ao adicionar item:', error);
+        }
+    }
+
+    function mostrarModalNovoProduto() {
+        // Fechar modal de adicionar item
+        const modalAdicionar = bootstrap.Modal.getInstance(document.getElementById('modalAdicionarItem'));
+        modalAdicionar.hide();
+        
+        // Mostrar modal de novo produto
+        const modal = new bootstrap.Modal(document.getElementById('modalNovoProduto'));
+        modal.show();
+    }
+
+    async function criarNovoProduto() {
+        const nome = document.getElementById('nomeNovoProduto').value.trim();
+        const preco = document.getElementById('precoNovoProduto').value;
+
+        if (!nome || !preco) {
+            showError('Por favor, preencha todos os campos');
+            return;
+        }
+
+        try {
+            const data = { nome: nome, preco: parseFloat(preco) };
+            const response = await makeRequest('/api/produtos/', 'POST', data);
+            
+            showSuccess('Produto criado com sucesso!');
+            
+            // Fechar modal e limpar formulário
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNovoProduto'));
+            modal.hide();
+            document.getElementById('formNovoProduto').reset();
+
+            // Recarregar produtos e mostrar modal de adicionar item
+            await carregarProdutos();
+            
+            // Mostrar modal de adicionar item novamente
+            const modalAdicionar = new bootstrap.Modal(document.getElementById('modalAdicionarItem'));
+            modalAdicionar.show();
+
+        } catch (error) {
+            console.error('Erro ao criar produto:', error);
+        }
+    }
+
+    function excluirItem(id) {
+        itemParaExcluir = id;
+        const modal = new bootstrap.Modal(document.getElementById('modalConfirmacao'));
+        modal.show();
+    }
+
+    async function confirmarExclusaoItem() {
+        if (!itemParaExcluir) return;
+
+        try {
+            await makeRequest(`/api/basket-items/${itemParaExcluir}/`, 'DELETE');
+            showSuccess('Item removido com sucesso!');
+            
+            // Fechar modal e recarregar dados
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacao'));
+            modal.hide();
+            carregarResumoCarrinho();
+            carregarItens();
+
+        } catch (error) {
+            console.error('Erro ao remover item:', error);
+        } finally {
+            itemParaExcluir = null;
+        }
+    }
+</script>
+{% endblock %}

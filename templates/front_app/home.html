@@ -1,0 +1,222 @@
+{% extends 'front_app/base.html' %}
+
+{% block title %}Início - Sistema de Compras{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-light p-5 rounded mb-4">
+            <h1 class="display-4">
+                <i class="fas fa-shopping-cart text-primary me-3"></i>
+                Sistema de Compras
+            </h1>
+            <p class="lead">Gerencie seus produtos e carrinhos de compras de forma organizada e eficiente.</p>
+            <hr class="my-4">
+            <p>Este sistema permite criar listas de compras personalizadas para diferentes estabelecimentos.</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Estatísticas Gerais -->
+    <div class="col-md-4 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-box fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">Total de Produtos</h5>
+                <h2 class="text-primary" id="total-produtos">-</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-shopping-basket fa-3x text-success mb-3"></i>
+                <h5 class="card-title">Total de Carrinhos</h5>
+                <h2 class="text-success" id="total-carrinhos">-</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-dollar-sign fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">Valor Total</h5>
+                <h2 class="text-warning" id="valor-total">-</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Ações Rápidas -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-plus-circle me-2"></i>Ações Rápidas</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'produtos' %}" class="btn btn-primary">
+                        <i class="fas fa-box me-2"></i>Gerenciar Produtos
+                    </a>
+                    <a href="{% url 'carrinhos' %}" class="btn btn-success">
+                        <i class="fas fa-shopping-basket me-2"></i>Gerenciar Carrinhos
+                    </a>
+                    <button class="btn btn-info" onclick="criarCarrinhoRapido()">
+                        <i class="fas fa-plus me-2"></i>Criar Carrinho Rápido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Carrinhos Recentes -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-clock me-2"></i>Carrinhos Recentes</h5>
+            </div>
+            <div class="card-body">
+                <div id="carrinhos-recentes">
+                    <div class="text-center text-muted">
+                        <i class="fas fa-spinner fa-spin"></i> Carregando...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar Carrinho Rápido -->
+<div class="modal fade" id="modalCriarCarrinho" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Criar Novo Carrinho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCriarCarrinho">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="nomeCarrinho" class="form-label">Nome do Carrinho</label>
+                        <input type="text" class="form-control" id="nomeCarrinho" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="estabelecimento" class="form-label">Estabelecimento</label>
+                        <input type="text" class="form-control" id="estabelecimento" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarCarrinho()">Criar Carrinho</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Carregar dados da página inicial
+    document.addEventListener('DOMContentLoaded', function() {
+        carregarEstatisticas();
+        carregarCarrinhosRecentes();
+    });
+
+    async function carregarEstatisticas() {
+        try {
+            // Carregar produtos
+            const produtosResponse = await makeRequest('/api/produtos/');
+            const produtos = produtosResponse.data || produtosResponse;
+            document.getElementById('total-produtos').textContent = produtos.length;
+
+            // Carregar carrinhos
+            const carrinhosResponse = await makeRequest('/api/baskets/');
+            const carrinhos = carrinhosResponse.data || carrinhosResponse;
+            document.getElementById('total-carrinhos').textContent = carrinhos.length;
+
+            // Carregar resumo geral
+            const resumoResponse = await makeRequest('/api/basket-summary/');
+            const resumo = resumoResponse.data || resumoResponse;
+            document.getElementById('valor-total').textContent = formatCurrency(resumo.valor_total);
+
+        } catch (error) {
+            console.error('Erro ao carregar estatísticas:', error);
+        }
+    }
+
+    async function carregarCarrinhosRecentes() {
+        try {
+            const response = await makeRequest('/api/baskets/');
+            const carrinhosData = response.data || response;
+            const carrinhos = carrinhosData.slice(0, 5); // Últimos 5 carrinhos
+
+            const container = document.getElementById('carrinhos-recentes');
+            
+            if (carrinhos.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted">Nenhum carrinho encontrado</div>';
+                return;
+            }
+
+            container.innerHTML = carrinhos.map(carrinho => `
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <strong>${carrinho.nome}</strong><br>
+                        <small class="text-muted">${carrinho.estabelecimento}</small>
+                    </div>
+                    <div class="text-end">
+                        <small class="text-muted">${formatCurrency(carrinho.valor_total)}</small><br>
+                        <a href="/carrinho/${carrinho.id}/" class="btn btn-sm btn-outline-primary">
+                            Ver Detalhes
+                        </a>
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            document.getElementById('carrinhos-recentes').innerHTML = 
+                '<div class="text-center text-danger">Erro ao carregar carrinhos</div>';
+        }
+    }
+
+    function criarCarrinhoRapido() {
+        const modal = new bootstrap.Modal(document.getElementById('modalCriarCarrinho'));
+        modal.show();
+    }
+
+    async function salvarCarrinho() {
+        const nome = document.getElementById('nomeCarrinho').value;
+        const estabelecimento = document.getElementById('estabelecimento').value;
+
+        if (!nome || !estabelecimento) {
+            showError('Por favor, preencha todos os campos');
+            return;
+        }
+
+        try {
+            const response = await makeRequest('/api/baskets/', 'POST', {
+                nome: nome,
+                estabelecimento: estabelecimento
+            });
+
+            showSuccess('Carrinho criado com sucesso!');
+            
+            // Fechar modal e limpar formulário
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCriarCarrinho'));
+            modal.hide();
+            document.getElementById('formCriarCarrinho').reset();
+
+            // Recarregar dados
+            carregarEstatisticas();
+            carregarCarrinhosRecentes();
+
+        } catch (error) {
+            console.error('Erro ao criar carrinho:', error);
+        }
+    }
+</script>
+{% endblock %}

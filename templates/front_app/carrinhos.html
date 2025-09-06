@@ -1,0 +1,239 @@
+{% extends 'front_app/base.html' %}
+
+{% block title %}Carrinhos - Sistema de Compras{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="fas fa-shopping-basket me-2"></i>Carrinhos de Compras</h2>
+            <button class="btn btn-primary" onclick="mostrarModalCriarCarrinho()">
+                <i class="fas fa-plus me-2"></i>Novo Carrinho
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nome</th>
+                                <th>Estabelecimento</th>
+                                <th>Total de Itens</th>
+                                <th>Valor Total</th>
+                                <th>Data Criação</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-carrinhos">
+                            <tr>
+                                <td colspan="7" class="text-center">
+                                    <i class="fas fa-spinner fa-spin"></i> Carregando carrinhos...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Criar/Editar Carrinho -->
+<div class="modal fade" id="modalCarrinho" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloModal">Novo Carrinho</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCarrinho">
+                    {% csrf_token %}
+                    <input type="hidden" id="carrinhoId">
+                    <div class="mb-3">
+                        <label for="nomeCarrinho" class="form-label">Nome do Carrinho</label>
+                        <input type="text" class="form-control" id="nomeCarrinho" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="estabelecimento" class="form-label">Estabelecimento</label>
+                        <input type="text" class="form-control" id="estabelecimento" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarCarrinho()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação -->
+<div class="modal fade" id="modalConfirmacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir este carrinho?</p>
+                <p class="text-danger"><small>Todos os itens do carrinho também serão excluídos.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarExclusao()">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let carrinhos = [];
+    let carrinhoParaExcluir = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        carregarCarrinhos();
+    });
+
+    async function carregarCarrinhos() {
+        try {
+            const response = await makeRequest('/api/baskets/');
+            
+            // Verificar se a resposta tem a estrutura esperada
+            if (response && Array.isArray(response)) {
+                carrinhos = response;
+            } else if (response && response.data && Array.isArray(response.data)) {
+                carrinhos = response.data;
+            } else {
+                carrinhos = [];
+            }
+            
+            renderizarTabela();
+        } catch (error) {
+            document.getElementById('tabela-carrinhos').innerHTML = 
+                '<tr><td colspan="7" class="text-center text-danger">Erro ao carregar carrinhos</td></tr>';
+        }
+    }
+
+    function renderizarTabela() {
+        const tbody = document.getElementById('tabela-carrinhos');
+        
+        if (carrinhos.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Nenhum carrinho encontrado</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = carrinhos.map(carrinho => `
+            <tr>
+                <td>${carrinho.id}</td>
+                <td>${carrinho.nome}</td>
+                <td>${carrinho.estabelecimento}</td>
+                <td>${carrinho.total_itens}</td>
+                <td>${formatCurrency(carrinho.valor_total)}</td>
+                <td>${formatDate(carrinho.data_criacao)}</td>
+                <td>
+                    <a href="/carrinho/${carrinho.id}/" class="btn btn-sm btn-outline-primary me-1">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="editarCarrinho(${carrinho.id})">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="excluirCarrinho(${carrinho.id})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function mostrarModalCriarCarrinho() {
+        document.getElementById('tituloModal').textContent = 'Novo Carrinho';
+        document.getElementById('formCarrinho').reset();
+        document.getElementById('carrinhoId').value = '';
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalCarrinho'));
+        modal.show();
+    }
+
+    function editarCarrinho(id) {
+        const carrinho = carrinhos.find(c => c.id === id);
+        if (!carrinho) return;
+
+        document.getElementById('tituloModal').textContent = 'Editar Carrinho';
+        document.getElementById('carrinhoId').value = carrinho.id;
+        document.getElementById('nomeCarrinho').value = carrinho.nome;
+        document.getElementById('estabelecimento').value = carrinho.estabelecimento;
+        
+        const modal = new bootstrap.Modal(document.getElementById('modalCarrinho'));
+        modal.show();
+    }
+
+    async function salvarCarrinho() {
+        const id = document.getElementById('carrinhoId').value;
+        const nome = document.getElementById('nomeCarrinho').value;
+        const estabelecimento = document.getElementById('estabelecimento').value;
+
+        if (!nome || !estabelecimento) {
+            showError('Por favor, preencha todos os campos');
+            return;
+        }
+
+        try {
+            const data = { nome: nome, estabelecimento: estabelecimento };
+            
+            if (id) {
+                // Editar carrinho existente
+                const response = await makeRequest(`/api/baskets/${id}/`, 'PUT', data);
+                showSuccess('Carrinho atualizado com sucesso!');
+            } else {
+                // Criar novo carrinho
+                const response = await makeRequest('/api/baskets/', 'POST', data);
+                showSuccess('Carrinho criado com sucesso!');
+            }
+
+            // Fechar modal e recarregar dados
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCarrinho'));
+            modal.hide();
+            carregarCarrinhos();
+
+        } catch (error) {
+            console.error('Erro ao salvar carrinho:', error);
+        }
+    }
+
+    function excluirCarrinho(id) {
+        carrinhoParaExcluir = id;
+        const modal = new bootstrap.Modal(document.getElementById('modalConfirmacao'));
+        modal.show();
+    }
+
+    async function confirmarExclusao() {
+        if (!carrinhoParaExcluir) return;
+
+        try {
+            await makeRequest(`/api/baskets/${carrinhoParaExcluir}/`, 'DELETE');
+            showSuccess('Carrinho excluído com sucesso!');
+            
+            // Fechar modal e recarregar dados
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmacao'));
+            modal.hide();
+            carregarCarrinhos();
+
+        } catch (error) {
+            console.error('Erro ao excluir carrinho:', error);
+        } finally {
+            carrinhoParaExcluir = null;
+        }
+    }
+</script>
+{% endblock %}
